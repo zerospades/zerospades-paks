@@ -7,13 +7,6 @@ To install: open the main menu in ZeroSpades, go to the Mods tab, and choose
 "Download official mods...". Every pak here is fetched into your local `Mods/`
 folder. Enable the ones you want; changes take effect on the next launch.
 
-Every change to the paks on `main` is also published as a
-[release](https://github.com/zerospades/zerospades-paks/releases) with all
-the paks in one zip. Releases are numbered `MAJOR.MINOR.N`: `MAJOR.MINOR` comes
-from the `VERSION` file (now `0.9`) and `N` counts up with each release. Only a
-maintainer changes `VERSION`, for example to `1.0`; the release workflow never
-does.
-
 Most of these mods were not made by the maintainers of this repo. They were
 adapted to work on ZeroSpades, with some fixes along the way. Credit stays with
 the original authors.
