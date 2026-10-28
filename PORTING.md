@@ -182,7 +182,7 @@ When it is non-zero:
 The stock `SMG/View.as` shows all three pieces.
 
 A gun with a built-in red dot or holographic sight (SHOTGUN-Remington870MSC,
-SHOTGUN-SPAS12, the AK47 paks) keeps its sight model and still follows
+SHOTGUN-SPAS12) keeps its sight model and still follows
 `cg_reflexScope` for the dot: modes 1–2 draw it with `DrawReflexSight3D` at
 the centre of the lens, modes 3–4 with `DrawReflexSight2D`, and mode 0 draws
 the sight's own reticle. To use the mod's own reticle or dot image, register it
@@ -218,7 +218,7 @@ reticle, an ammo icon) and make it work, in the format and size ZeroSpades
 loads (for example `Gfx/Bullet/9mm.png` at the stock 3×12 size).
 
 Name custom images after the mod, under the weapon's folder, for example
-`Gfx/Weapons/Glock/Scope.png`. Do not use generic names such as `Gfx/1.png`,
+`Gfx/Weapons/AUG/Scope.png`. Do not use generic names such as `Gfx/1.png`,
 and do not overwrite stock files such as `Gfx/SMG.png` unless the mod is meant
 to replace them for every gun of that class.
 
@@ -230,7 +230,7 @@ to replace them for every gun of that class.
   `cg_trueAimDownSight`, `cg_reflexScope`, `cg_weaponCharms` and the
   `cg_viewWeapon*` settings. Use them instead of declaring new ones.
 - Prefix any setting the mod adds with the mod's name (for example
-  `glock_skin`), so two mods cannot collide.
+  `mymod_skin`), so two mods cannot collide.
 
 ## Sounds
 

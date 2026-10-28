@@ -8,8 +8,11 @@ To install: open the main menu in ZeroSpades, go to the Mods tab, and choose
 folder. Enable the ones you want; changes take effect on the next launch.
 
 Every change to the paks on `main` is also published as a
-[release](https://github.com/zerospades/zerospades-paks/releases) named after
-its date, such as `2026.10.31`, with all the paks in one zip.
+[release](https://github.com/zerospades/zerospades-paks/releases) with all
+the paks in one zip. Releases are numbered `MAJOR.MINOR.N`: `MAJOR.MINOR` comes
+from the `VERSION` file (now `0.9`) and `N` counts up with each release. Only a
+maintainer changes `VERSION`, for example to `1.0`; the release workflow never
+does.
 
 Most of these mods were not made by the maintainers of this repo. They were
 adapted to work on ZeroSpades, with some fixes along the way. Credit stays with
@@ -90,9 +93,10 @@ Every weapon pak also:
 ### Checking a pak
 
 The **Check paks** GitHub Actions workflow runs on every pull request and
-checks the rules that can be checked without the game. Run it locally with:
+checks the rules that can be checked without the game, on the paks the pull
+request adds or changes. Run it locally with:
 
-    python3 tools/check_paks.py --base <path to zerospades>/Resources
+    python3 tools/check_paks.py --base <path to zerospades>/Resources YOUR-Pak-.pak
 
 ### Trying a pak before a pull request
 
