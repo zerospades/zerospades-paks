@@ -1,0 +1,62 @@
+name: Release
+
+# Publishes every pak in one zip, as a release named after the UTC date
+# (2026.10.31). A second release on the same day gets a suffix (2026.10.31.2).
+
+on:
+  push:
+    branches: [main]
+    paths: ['*.pak']
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check:
+    uses: ./.github/workflows/check-paks.yml
+
+  release:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pick the release name
+        id: name
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base=$(date -u +%Y.%m.%d)
+          tag=$base
+          n=1
+          while gh release view "$tag" >/dev/null 2>&1; do
+            n=$((n + 1))
+            tag="$base.$n"
+          done
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Zip the paks
+        run: zip -X -9 "zerospades-paks-${{ steps.name.outputs.tag }}.zip" *.pak
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.name.outputs.tag }}
+        run: |
+          {
+            echo "Official ZeroSpades mod paks as of $TAG."
+            echo
+            echo "Unzip into your \`Mods/\` folder, or use \"Download official mods...\" in game."
+            echo
+            echo "| Pak | Size |"
+            echo "| --- | ---: |"
+            for p in *.pak; do
+              printf '| `%s` | %s KB |\n' "$p" "$(( $(stat -c %s "$p") / 1024 ))"
+            done
+          } > notes.md
+          gh release create "$TAG" "zerospades-paks-$TAG.zip" \
+            --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA"
