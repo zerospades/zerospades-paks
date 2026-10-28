@@ -53,6 +53,10 @@ self-contained: the folder layout inside the pak mirrors the game's resource
 layout, for example `Gfx/Fonts/OpenSans.ttf` to replace the default font, or
 `Sounds/...` for audio.
 
+Porting a weapon mod from OpenSpades? Read [PORTING.md](PORTING.md) first. It
+lists what a weapon pak must support (left-handed view, charms, reflex
+sights, Opus sounds) and how to test it.
+
 ## Contact
 
 Trouble finding a mod or installing one? Reach ZeroG on Discord: ZeroG#2020.
