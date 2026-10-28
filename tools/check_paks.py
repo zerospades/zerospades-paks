@@ -31,6 +31,15 @@ GUN_TAGS = {'SEMI', 'SMG', 'SHOTGUN'}
 TAGS = WEAPON_TAGS | {'FONT', 'SFX', 'VFX'}
 NAME_RE = re.compile(r'^([A-Z]+)-([A-Za-z0-9]+)-([A-Za-z0-9]*)\.pak$')
 STRING_RE = re.compile(r'"([^"\n]*)"')
+# files ZeroSpades loads by listing a directory rather than by name (only the
+# directory's own files, not subdirectories); see Client/Fonts.cpp,
+# Client/IFont.cpp, Client/Client.cpp (LoadKillSounds), Gui/StartupScreenHelper.cpp
+ENGINE_SCANNED = [re.compile(p, re.I) for p in (
+    r'Fonts/[^/]+\.(otf|ttf|ttc)',
+    r'Gfx/Fonts/[^/]+\.ospfont',
+    r'Sounds/Feedback/Killstreak/[^/]+\.opus',
+    r'Locales/.+',
+)]
 ASSET_EXT = ('.kv6', '.png', '.tga', '.jpg', '.opus', '.ogg', '.wav', '.ttf', '.otf', '.as', '.vxl')
 
 
@@ -170,15 +179,24 @@ def check_pak(path, base, report, have_ffprobe, tmp):
         else:
             report.error(pak, f'{where}: "{ref}" is not in the pak or the base game')
 
-    if tag in WEAPON_TAGS:
-        used = {r.lower() for r in refs}
-        for n in files:
-            low = n.lower()
-            if low.endswith('.as') or low in used or n in base or low in base_lower:
-                continue
-            if any(low.startswith(p) for p in prefixes):
-                continue
-            report.error(pak, f'{n}: no script loads it and it does not replace a base game file; remove it')
+    # a file is used when a script names it, a script builds paths in its
+    # directory, the engine lists its directory, or it replaces a base game file
+    used = {r.lower() for r in refs}
+    for n in files:
+        if n.lower().endswith('.ospfont'):
+            # the engine draws an .ospfont with the image of the same name (.png, else .tga)
+            stem = n[:-len('.ospfont')].lower()
+            used.add(stem + '.png' if stem + '.png' in lower else stem + '.tga')
+    for n in files:
+        low = n.lower()
+        if low.endswith('.as') or low in used or n in base or low in base_lower:
+            continue
+        if any(low.startswith(p) for p in prefixes):
+            continue
+        if any(r.fullmatch(n) for r in ENGINE_SCANNED):
+            continue
+        report.error(pak, f'{n}: nothing loads it (no script names it, the engine does not '
+                          'list its folder, and it replaces no base game file); remove it')
 
     # view weapon rules
     for name, src in scripts.items():

@@ -68,8 +68,11 @@ Every pak:
 - Ships sounds as `.opus`, never `.wav`. Sounds other players hear (the ones
   `ThirdPerson.as` plays) are mono; only `FireStereo` and the local player's
   own sounds may be stereo.
-- Contains no `.weak` files, no system files, and no file that is neither
-  loaded by its scripts nor a replacement for a base game file.
+- Contains no `.weak` files, no system files, and no unused file. A file is
+  used when its scripts load it, when it replaces a base game file, or when
+  ZeroSpades loads its whole folder: fonts directly in `Fonts/`, `.ospfont`
+  fonts and their images in `Gfx/Fonts/`, and kill sounds in
+  `Sounds/Feedback/Killstreak/`.
 - Refers to every file by its exact name, including case.
 - Names its own images after the mod, under `Gfx/Weapons/<Mod>/`, rather
   than with generic names such as `Gfx/1.png`.
