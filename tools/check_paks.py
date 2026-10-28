@@ -199,13 +199,13 @@ def check_pak(path, base, report, have_ffprobe, tmp):
         report.error(pak, f'{n}: nothing loads it (no script names it, the engine does not '
                           'list its folder, and it replaces no base game file); remove it')
 
-    # arrays have both a length() method and a length property, so a bare
-    # `.length` only compiles as a call argument, e.g. GetRandom(sounds.length)
+    # ZeroSpades builds AngelScript with property accessors (AS_USE_ACCESSORS):
+    # arrays have a `length` property and no length() method
     for name, src in scripts.items():
-        for m in re.finditer(r'\b\w+\.length\b(?!\s*[(),])', src):
+        for m in re.finditer(r'\b\w+\.length\s*\(\s*\)', src):
             line = src.count('\n', 0, m.start()) + 1
-            report.error(pak, f'{name}:{line}: "{m.group(0)}" does not compile here '
-                              '("Invalid operation on method"); use length()')
+            report.error(pak, f'{name}:{line}: "{m.group(0)}" does not compile ("\'length\' evaluates '
+                              'to the non-function type \'uint\'"); use the .length property')
 
     # view weapon rules
     for name, src in scripts.items():
