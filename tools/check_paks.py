@@ -224,7 +224,15 @@ def check_pak(path, base, report, have_ffprobe, tmp):
             if getter_body(src, 'MuzzlePosition') is None and matrix is not None:
                 report.warn(pak, f'{name}: no MuzzlePosition; tracers start at the stock gun\'s muzzle')
             if 'cg_reflexScope' not in src:
-                report.warn(pak, f'{name}: cg_reflexScope is ignored (fine if the gun has its own optic)')
+                if 'DrawReflexSight3D' in src or 'DrawReflexSight2D' in src:
+                    report.error(pak, f'{name}: draws a reflex dot but ignores cg_reflexScope; follow its modes '
+                                      'like the stock skins (see PORTING.md)')
+                else:
+                    report.warn(pak, f'{name}: cg_reflexScope is ignored (fine if the gun has its own optic)')
+            draw2d = function_body(src, r'void\s+Draw2D')
+            if draw2d and 'DrawImage' in draw2d and 'cg_pngScope' not in src:
+                report.error(pak, f'{name}: Draw2D draws its own image but ignores cg_pngScope; '
+                                  'set scopeImage and let BasicViewWeapon::Draw2D draw it')
         for s in STRING_RE.findall(src):
             if re.fullmatch(r'Gfx/[^/]+\.(png|tga)', s, re.I) and s not in base and s.lower() not in base_lower:
                 report.warn(pak, f'{name}: "{s}" is a generic name in Gfx/; prefer Gfx/Weapons/<Mod>/...')

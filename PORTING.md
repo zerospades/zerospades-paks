@@ -181,15 +181,41 @@ When it is non-zero:
 
 The stock `SMG/View.as` shows all three pieces.
 
+A gun with a built-in red dot or holographic sight (SHOTGUN-Remington870MSC,
+SHOTGUN-SPAS12, the AK47 paks) keeps its sight model and still follows
+`cg_reflexScope` for the dot: modes 1–2 draw it with `DrawReflexSight3D` at
+the centre of the lens, modes 3–4 with `DrawReflexSight2D`, and mode 0 draws
+the sight's own reticle. To use the mod's own reticle or dot image, register it
+as `reflexImage` or `ballImage` in the constructor, like SHOTGUN-Remington870MSC
+does with its round reticle. Never draw the dot by hand.
+
 ### Aim-down-sight overlays
 
 Many OpenSpades mods draw their own full-screen image whenever the player
 aims (`if (AimDownSightState > 0.6) DrawImage(...)`). In ZeroSpades this
 overrides the player's choice of scope.
 
-Only draw a full-screen scope image when `cg_pngScope` is on, and otherwise
-let the 3D sights work. Fall through to `BasicViewWeapon::Draw2D()` so the
-player's crosshair and scope settings still apply.
+Instead, register the image as `scopeImage` in the constructor and do not draw
+it yourself: `BasicViewWeapon::Draw2D()` draws it when `cg_pngScope` is on, and
+the player's crosshair and scope settings otherwise. In `AddToScene()`, hide
+the gun only while the png scope is up, as the stock scripts do:
+
+```as
+if (cg_pngScope.BoolValue and AimDownSightStateSmooth > 0.99F) {
+    LeftHandPosition = Vector3(0.0F, 0.0F, 0.0F);
+    RightHandPosition = Vector3(0.0F, 0.0F, 0.0F);
+    return;
+}
+```
+
+With `cg_pngScope` off the gun stays visible while aiming, so its sight must
+sit on the line of sight: aim at the real sight on the model, not at the
+stock gun's sight positions.
+
+An image that does not load is not a reason to delete it. If a mod ships an
+image its scripts never use, find what it was meant for (a muzzle flash, a
+reticle, an ammo icon) and make it work, in the format and size ZeroSpades
+loads (for example `Gfx/Bullet/9mm.png` at the stock 3×12 size).
 
 Name custom images after the mod, under the weapon's folder, for example
 `Gfx/Weapons/Glock/Scope.png`. Do not use generic names such as `Gfx/1.png`,
