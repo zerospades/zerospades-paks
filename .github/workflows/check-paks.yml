@@ -1,0 +1,66 @@
+name: Check paks
+
+# Checks the paks a change adds or modifies. Paks nobody touched are left
+# alone, so an older pak that predates a rule does not block unrelated work.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: List the paks to check
+        id: paks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          base=
+          case "$EVENT" in
+            pull_request) base=$PR_BASE ;;
+            push) base=$PUSH_BEFORE ;;
+            *) base=$(gh release view --json tagName --jq .tagName 2>/dev/null || true) ;;
+          esac
+          if [ -z "$base" ] || [ "$base" = 0000000000000000000000000000000000000000 ] \
+              || ! git rev-parse -q --verify "$base^{commit}" >/dev/null; then
+            echo "No base to compare with: checking every pak."
+            ls *.pak > paks.txt
+          else
+            echo "Checking the paks changed since $base."
+            git diff --name-only --diff-filter=AMR "$base" HEAD -- '*.pak' > paks.txt
+          fi
+          cat paks.txt
+          echo "count=$(wc -l < paks.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
+
+      - name: Install ffprobe
+        if: steps.paks.outputs.count != '0'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      # The checker resolves references against the base game: the GPL assets
+      # in the zerospades repository, plus the non-free pak it downloads.
+      - name: List base game assets
+        if: steps.paks.outputs.count != '0'
+        run: |
+          git clone --quiet --depth 1 --filter=blob:none --no-checkout \
+            https://github.com/zerospades/zerospades.git "$RUNNER_TEMP/zerospades"
+          git -C "$RUNNER_TEMP/zerospades" ls-tree -r --name-only HEAD Resources \
+            | sed 's|^Resources/||' > "$RUNNER_TEMP/base-gpl.txt"
+          curl -sSfL -o "$RUNNER_TEMP/devpackage.zip" \
+            https://github.com/yvt/openspades-paks/releases/download/r33/OpenSpadesDevPackage-r33.zip
+
+      - name: Check paks
+        if: steps.paks.outputs.count != '0'
+        run: |
+          xargs python3 tools/check_paks.py \
+            --base "$RUNNER_TEMP/base-gpl.txt" \
+            --base "$RUNNER_TEMP/devpackage.zip" < paks.txt
