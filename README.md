@@ -54,8 +54,44 @@ layout, for example `Gfx/Fonts/OpenSans.ttf` to replace the default font, or
 `Sounds/...` for audio.
 
 Porting a weapon mod from OpenSpades? Read [PORTING.md](PORTING.md) first. It
-lists what a weapon pak must support (left-handed view, charms, reflex
-sights, Opus sounds) and how to test it.
+explains each rule below and how to meet it.
+
+### Rules
+
+Every pak:
+
+- Follows the naming standard above.
+- Ships sounds as `.opus`, never `.wav`. Sounds other players hear (the ones
+  `ThirdPerson.as` plays) are mono; only `FireStereo` and the local player's
+  own sounds may be stereo.
+- Contains no `.weak` files, no system files, and no file that is neither
+  loaded by its scripts nor a replacement for a base game file.
+- Refers to every file by its exact name, including case.
+- Names its own images after the mod, under `Gfx/Weapons/<Mod>/`, rather
+  than with generic names such as `Gfx/1.png`.
+
+Every weapon pak also:
+
+- Supports left-handed view (`cg_viewWeaponSide`): the whole view weapon is
+  mirrored, including every model, the hands and the sights.
+- Draws charms when `cg_weaponCharms` is on.
+- Supports reflex sights (`cg_reflexScope`) when the gun has iron sights.
+- Returns `MuzzlePosition` and `CaseEjectPosition` in eye space, on the
+  model, so tracers and casings leave from the gun.
+- Keeps the hands on the gun through every animation.
+
+### Checking a pak
+
+The **Check paks** GitHub Actions workflow runs on every pull request and
+checks the rules that can be checked without the game. Run it locally with:
+
+    python3 tools/check_paks.py --base <path to zerospades>/Resources
+
+Then try the pak in game before asking for a review:
+
+    ZeroSpades --try-mod path/to/YOUR-Pak-.pak --replay-demo
+
+and go through the checklist in the pull request template.
 
 ## Contact
 
