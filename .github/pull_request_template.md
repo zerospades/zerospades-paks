@@ -5,7 +5,8 @@
 ## Checklist
 
 The **Check paks** workflow covers the file rules. Tick the rest after trying
-the pak in game with `--try-mod <pak> --replay-demo`. Delete the weapon section
+the pak in game with the commands in README.md, "Trying a pak before a pull
+request". Delete the weapon section
 for fonts, sound packs and other non-weapon paks.
 
 ### Pak
