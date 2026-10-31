@@ -133,4 +133,4 @@ details. Then go through the checklist in the pull request template.
 
 ## Contact
 
-Trouble finding a mod or installing one? Reach ZeroG on Discord: ZeroG#2020.
+Trouble finding a mod or installing one? Ask in the [ZeroSpades Discord](https://discord.gg/t64rKedpAu).
