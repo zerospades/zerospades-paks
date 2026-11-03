@@ -7,6 +7,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
+    inputs:
+      base:
+        description: Commit or tag to compare with; empty checks every pak
+        type: string
+        default: ''
 
 jobs:
   check:
@@ -22,12 +28,15 @@ jobs:
           EVENT: ${{ github.event_name }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BEFORE: ${{ github.event.before }}
+          CALLER_BASE: ${{ inputs.base }}
         run: |
           base=
           case "$EVENT" in
             pull_request) base=$PR_BASE ;;
             push) base=$PUSH_BEFORE ;;
           esac
+          # a calling workflow (the release) says what to compare with
+          [ -n "$CALLER_BASE" ] && base=$CALLER_BASE
           if [ -z "$base" ] || [ "$base" = 0000000000000000000000000000000000000000 ] \
               || ! git rev-parse -q --verify "$base^{commit}" >/dev/null; then
             echo "No base to compare with: checking every pak."

@@ -1,0 +1,179 @@
+name: Release
+
+# Once a day, publishes the paks on main as a release when merged changes
+# touched them since the last release. Each release is tagged vMAJOR.N and has
+# every pak in one zip attached. ZeroSpades downloads the latest release whose
+# MAJOR it supports.
+#
+# MAJOR changes only on a compatibility break, which only a maintainer can
+# trigger: run this workflow by hand with "compatibility break" ticked. N counts
+# releases within a MAJOR, starting at 0.
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      compatibility_break:
+        description: Compatibility break (vMAJOR+1.0); release even if no pak changed
+        type: boolean
+        default: false
+      dry_run:
+        description: Dry run (build the zip and show the version, publish nothing)
+        type: boolean
+        default: false
+  # editing this workflow runs it as a dry run on the pull request
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - .github/workflows/check-paks.yml
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      last: ${{ steps.plan.outputs.last }}
+      next: ${{ steps.plan.outputs.next }}
+      release: ${{ steps.plan.outputs.release }}
+      dry_run: ${{ steps.plan.outputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Work out the next version
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BREAK: ${{ inputs.compatibility_break }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          dry_run=false
+          if [ "$EVENT" = pull_request ] || [ "$DRY_RUN" = true ]; then dry_run=true; fi
+          if [ "$dry_run" = false ] && [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::Releases are published from main only; run it on main, or as a dry run."
+            exit 1
+          fi
+
+          # the latest vMAJOR.N tag; other tags (r1, 0.9.0...) are not releases of this scheme
+          last=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
+
+          if [ -z "$last" ]; then
+            next=v1.0
+          else
+            major=${last#v}; n=${major#*.}; major=${major%%.*}
+            if [ "$BREAK" = true ]; then
+              next=v$((major + 1)).0
+            else
+              next=v$major.$((n + 1))
+            fi
+          fi
+
+          if [ -z "$last" ]; then
+            ls *.pak > changed.txt
+          else
+            # added, modified, renamed or removed paks all make a new release
+            git diff --name-only "$last" HEAD -- '*.pak' > changed.txt
+          fi
+
+          release=false
+          if [ -s changed.txt ] || [ "$BREAK" = true ] || [ "$dry_run" = true ]; then release=true; fi
+
+          {
+            echo "### Release plan"
+            echo
+            echo "- Last release: ${last:-none}"
+            echo "- Next release: $next"
+            echo "- Compatibility break: ${BREAK:-false}"
+            echo "- Dry run: $dry_run"
+            echo "- Paks changed since the last release: $(wc -l < changed.txt | tr -d ' ')"
+            sed 's/^/  - `/; s/$/`/' changed.txt
+            [ "$release" = true ] || echo "- Nothing to release."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "last=$last" >> "$GITHUB_OUTPUT"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
+
+  # The paks changed since the last release must pass the checks. The first
+  # release has nothing to compare with and is not checked: every pak on main
+  # got there through a checked pull request or predates the checks.
+  check:
+    needs: plan
+    if: needs.plan.outputs.release == 'true' && needs.plan.outputs.last != ''
+    uses: ./.github/workflows/check-paks.yml
+    with:
+      base: ${{ needs.plan.outputs.last }}
+
+  publish:
+    needs: [plan, check]
+    if: >-
+      always() && needs.plan.result == 'success' && needs.plan.outputs.release == 'true'
+      && (needs.check.result == 'success' || needs.check.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LAST: ${{ needs.plan.outputs.last }}
+      TAG: ${{ needs.plan.outputs.next }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Zip the paks
+        run: zip -X -9 "zerospades-paks-$TAG.zip" *.pak
+
+      - name: Write the release notes
+        run: |
+          major=${TAG#v}; major=${major%%.*}
+          {
+            echo "Official ZeroSpades mods, release $TAG."
+            echo
+            echo "Compatibility version $major: a ZeroSpades client downloads the latest release"
+            echo "whose compatibility version it supports. To install by hand, unzip into your"
+            echo "\`Mods/\` folder."
+            echo
+            echo "## Merged pull requests"
+            echo
+            # pull requests whose merge commit is in this release and not in the last one
+            gh pr list --state merged --base main --limit 200 \
+              --json number,title,mergeCommit --jq '.[] | "\(.number)\t\(.mergeCommit.oid)\t\(.title)"' \
+              | while IFS=$'\t' read -r number oid title; do
+                  git merge-base --is-ancestor "$oid" HEAD 2>/dev/null || continue
+                  if [ -n "$LAST" ] && git merge-base --is-ancestor "$oid" "$LAST" 2>/dev/null; then continue; fi
+                  echo "- #$number $title"
+                done
+            echo
+            echo "## Paks"
+            echo
+            echo "| Pak | Size |"
+            echo "| --- | ---: |"
+            for p in *.pak; do
+              printf '| `%s` | %s KB |\n' "$p" "$(( $(stat -c %s "$p") / 1024 ))"
+            done
+          } > notes.md
+          cat notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the dry run's zip for inspection
+        if: needs.plan.outputs.dry_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zerospades-paks-${{ needs.plan.outputs.next }}-dry-run
+          path: |
+            zerospades-paks-${{ needs.plan.outputs.next }}.zip
+            notes.md
+          retention-days: 7
+
+      - name: Publish the release
+        if: needs.plan.outputs.dry_run != 'true'
+        run: |
+          gh release create "$TAG" "zerospades-paks-$TAG.zip" \
+            --title "$TAG" --notes-file notes.md --target "$GITHUB_SHA" --latest

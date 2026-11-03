@@ -11,6 +11,36 @@ Most of these mods were not made by the maintainers of this repo. They were
 adapted to work on ZeroSpades, with some fixes along the way. Credit stays with
 the original authors.
 
+## Releases
+
+Once a day at 03:00 UTC, if the pull requests merged since the last release
+added, changed or removed a pak, the **Release** GitHub Actions workflow
+publishes a new [release](https://github.com/zerospades/zerospades-paks/releases).
+It first runs the pak checks on the paks that changed, and publishes nothing
+if they fail.
+
+Each release is tagged `vMAJOR.N`, for example `v1.4`, and has every pak in
+one zip attached, `zerospades-paks-vMAJOR.N.zip`. Its notes list the merged
+pull requests and the paks it contains.
+
+- `MAJOR` is the compatibility version. It changes only on a compatibility
+  break: a change that ZeroSpades clients made for the previous `MAJOR` cannot
+  use. A ZeroSpades client downloads the latest release whose `MAJOR` it
+  supports. (For now, "Download official mods..." still fetches the paks
+  straight from `main`.)
+- `N` counts the releases of a `MAJOR`, starting at 0: `v1.0`, `v1.1`, and so
+  on. A compatibility break starts again at `v2.0`.
+
+Only a maintainer can make a compatibility break: in the **Actions** tab, open
+**Release**, choose **Run workflow** on `main`, and tick **Compatibility
+break**. That publishes `vMAJOR+1.0`, even if no pak changed. The scheduled
+run never changes `MAJOR`.
+
+**Run workflow** with **Dry run** ticked builds the zip and shows the version
+it would publish, without publishing anything; the zip is kept for 7 days
+under the run's artifacts. A pull request that edits the release or check
+workflows runs a dry run too.
+
 ## Naming standard
 
 Every pak follows a three-field pattern, separated by hyphens:
