@@ -6,8 +6,9 @@ name: Release
 # MAJOR it supports.
 #
 # MAJOR changes only on a compatibility break, which only a maintainer can
-# trigger: run this workflow by hand with "compatibility break" ticked. N counts
-# releases within a MAJOR, starting at 0.
+# trigger: run this workflow by hand with "New major" ticked. That is also how the
+# first release, v1.0, is made; until then the daily run publishes nothing. N
+# counts releases within a MAJOR, starting at 0.
 
 on:
   schedule:
@@ -15,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       compatibility_break:
-        description: Compatibility break (vMAJOR+1.0); release even if no pak changed
+        description: New major (compatibility break, or the first release v1.0); release even if no pak changed
         type: boolean
         default: false
       dry_run:
@@ -81,18 +82,27 @@ jobs:
           fi
 
           release=false
-          if [ -s changed.txt ] || [ "$BREAK" = true ] || [ "$dry_run" = true ]; then release=true; fi
+          if [ "$BREAK" = true ] || [ "$dry_run" = true ]; then
+            release=true
+          elif [ -z "$last" ]; then
+            # the first release is a new major too: a maintainer starts v1.0 by hand
+            echo "No release yet: run this workflow with \"New major\" ticked to publish v1.0."
+          elif [ -s changed.txt ]; then
+            release=true
+          fi
 
           {
             echo "### Release plan"
             echo
             echo "- Last release: ${last:-none}"
             echo "- Next release: $next"
-            echo "- Compatibility break: ${BREAK:-false}"
+            echo "- New major: ${BREAK:-false}"
             echo "- Dry run: $dry_run"
             echo "- Paks changed since the last release: $(wc -l < changed.txt | tr -d ' ')"
             sed 's/^/  - `/; s/$/`/' changed.txt
-            [ "$release" = true ] || echo "- Nothing to release."
+            if [ "$release" != true ]; then
+              if [ -z "$last" ]; then echo "- Nothing to release: the first release, v1.0, is made by a run with \"New major\" ticked."; else echo "- Nothing to release."; fi
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
           echo "last=$last" >> "$GITHUB_OUTPUT"

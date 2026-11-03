@@ -31,10 +31,13 @@ pull requests and the paks it contains.
 - `N` counts the releases of a `MAJOR`, starting at 0: `v1.0`, `v1.1`, and so
   on. A compatibility break starts again at `v2.0`.
 
-Only a maintainer can make a compatibility break: in the **Actions** tab, open
-**Release**, choose **Run workflow** on `main`, and tick **Compatibility
-break**. That publishes `vMAJOR+1.0`, even if no pak changed. The scheduled
-run never changes `MAJOR`.
+Only a maintainer can start a new major: in the **Actions** tab, open
+**Release**, choose **Run workflow** on `main`, and tick **New major**. That
+publishes `vMAJOR+1.0`, even if no pak changed. The scheduled run never
+changes `MAJOR`.
+
+The first release, `v1.0`, is made the same way: until a maintainer runs
+**Release** with **New major** ticked, the scheduled run publishes nothing.
 
 **Run workflow** with **Dry run** ticked builds the zip and shows the version
 it would publish, without publishing anything; the zip is kept for 7 days
