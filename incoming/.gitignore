@@ -1,6 +1,0 @@
-# Inbox contents are transient: raw uploads are converted to .pak files in
-# the repo root and then removed. Only this folder's README is tracked.
-*
-!.gitignore
-!README.md
-!PUT-MODS-HERE.txt
